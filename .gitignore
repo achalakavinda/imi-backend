@@ -480,3 +480,10 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 .azure
+
+# Docker
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+*.log

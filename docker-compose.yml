@@ -1,0 +1,90 @@
+# Docker Compose for Development Environment
+version: "3.8"
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: migratingassistant-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-MigratingAssistant}
+      MYSQL_USER: ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD:-rootpassword}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # .NET Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: migratingassistant-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5000}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      # Database configuration (matches DatabaseOptions.cs)
+      - Database__Provider=MySql
+      - Database__ConnectionString=Server=mysql;Database=${MYSQL_DATABASE:-MigratingAssistant};User=${MYSQL_USER:-appuser};Password=${MYSQL_PASSWORD:-apppassword};
+      # JWT configuration
+      - JwtSettings__Secret=${JWT_SECRET:-YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment}
+      - JwtSettings__Issuer=${JWT_ISSUER:-MigratingAssistant}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-MigratingAssistantUsers}
+      - JwtSettings__ExpirationInMinutes=${JWT_EXPIRY_MINUTES:-60}
+      - JwtSettings__RefreshTokenExpirationInDays=${JWT_REFRESH_EXPIRY_DAYS:-7}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+    # Note: No volume mounts needed for production-ready image
+    # Configuration is provided via environment variables above
+
+  # phpMyAdmin for Database Management (Optional)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: migratingassistant-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "${PHPMYADMIN_PORT:-8080}:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
