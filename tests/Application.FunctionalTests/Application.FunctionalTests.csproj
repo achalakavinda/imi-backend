@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>MigratingAssistant.Application.FunctionalTests</RootNamespace>
+        <AssemblyName>MigratingAssistant.Application.FunctionalTests</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+    <ItemGroup>
+      <!--
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+      <PackageReference Include="Microsoft.Data.SqlClient" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+      <PackageReference Include="Microsoft.NET.Test.Sdk" />
+      <PackageReference Include="MySqlConnector" />
+      <PackageReference Include="NUnit"/>
+      <PackageReference Include="NUnit.Analyzers">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="NUnit3TestAdapter"/>
+      <PackageReference Include="coverlet.collector">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Moq" />
+      <PackageReference Include="Respawn" />
+      <PackageReference Include="Shouldly" />
+      <PackageReference Include="System.Configuration.ConfigurationManager" />
+      <PackageReference Include="Testcontainers.MsSql" />
+      <PackageReference Include="Testcontainers.MySql" />
+  xUnit removed: using NUnit as the test runner -->
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Web\Web.csproj" />
+    </ItemGroup>
+
+</Project>
