@@ -217,34 +217,10 @@ jobs:
             echo "Registry: registry.digitalocean.com/${DO_REGISTRY_NAME:-migratingassistant}"
             echo "Branch: ${CIRCLE_BRANCH}"
 
-            # Select appropriate token based on branch
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
-              if [ -z "$DO_ACCESS_TOKEN_PRODUCTION" ]; then
-                echo "ERROR: DO_ACCESS_TOKEN_PRODUCTION environment variable is not set!"
-                echo "Please add it to CircleCI Project Settings → Environment Variables"
-                echo "This token is used for production deployments (master branch)"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN_PRODUCTION}"
-              echo "Using production token for master branch"
-            elif [ "$CIRCLE_BRANCH" = "dev" ]; then
-              if [ -z "$DO_ACCESS_TOKEN_STAGING" ]; then
-                echo "ERROR: DO_ACCESS_TOKEN_STAGING environment variable is not set!"
-                echo "Please add it to CircleCI Project Settings → Environment Variables"
-                echo "This token is used for staging deployments (dev branch)"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN_STAGING}"
-              echo "Using staging token for dev branch"
-            else
-              # Fallback to DO_ACCESS_TOKEN for other branches (backward compatibility)
-              if [ -z "$DO_ACCESS_TOKEN" ]; then
-                echo "ERROR: No access token found for branch: ${CIRCLE_BRANCH}"
-                echo "Please set DO_ACCESS_TOKEN, DO_ACCESS_TOKEN_STAGING, or DO_ACCESS_TOKEN_PRODUCTION"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN}"
-              echo "Using default token for ${CIRCLE_BRANCH} branch"
+            if [ -z "$DO_ACCESS_TOKEN" ]; then
+              echo "ERROR: DO_ACCESS_TOKEN environment variable is not set!"
+              echo "Please add it to CircleCI Project Settings → Environment Variables"
+              exit 1
             fi
 
             if [ -z "$DO_REGISTRY_NAME" ]; then
@@ -254,7 +230,7 @@ jobs:
               exit 1
             fi
 
-            doctl auth init --access-token ${TOKEN}
+            doctl auth init --access-token ${DO_ACCESS_TOKEN}
             doctl registry login
 
             echo "✓ Successfully authenticated with Digital Ocean Container Registry"
@@ -350,34 +326,13 @@ jobs:
             echo "Authenticating with Digital Ocean for deployment..."
             echo "Branch: ${CIRCLE_BRANCH}"
 
-            # Select appropriate token based on branch
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
-              if [ -z "$DO_ACCESS_TOKEN_PRODUCTION" ]; then
-                echo "ERROR: DO_ACCESS_TOKEN_PRODUCTION environment variable is not set!"
-                echo "Please add it to CircleCI Project Settings → Environment Variables"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN_PRODUCTION}"
-              echo "Using production token for master branch"
-            elif [ "$CIRCLE_BRANCH" = "dev" ]; then
-              if [ -z "$DO_ACCESS_TOKEN_STAGING" ]; then
-                echo "ERROR: DO_ACCESS_TOKEN_STAGING environment variable is not set!"
-                echo "Please add it to CircleCI Project Settings → Environment Variables"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN_STAGING}"
-              echo "Using staging token for dev branch"
-            else
-              # Fallback to DO_ACCESS_TOKEN for backward compatibility
-              if [ -z "$DO_ACCESS_TOKEN" ]; then
-                echo "ERROR: No access token found for branch: ${CIRCLE_BRANCH}"
-                exit 1
-              fi
-              TOKEN="${DO_ACCESS_TOKEN}"
-              echo "Using default token for ${CIRCLE_BRANCH} branch"
+            if [ -z "$DO_ACCESS_TOKEN" ]; then
+              echo "ERROR: DO_ACCESS_TOKEN environment variable is not set!"
+              echo "Please add it to CircleCI Project Settings → Environment Variables"
+              exit 1
             fi
 
-            doctl auth init --access-token ${TOKEN}
+            doctl auth init --access-token ${DO_ACCESS_TOKEN}
             echo "✓ Successfully authenticated with Digital Ocean"
 
       # Deploy to Digital Ocean App Platform
@@ -385,51 +340,19 @@ jobs:
           name: "Deploy to Digital Ocean App Platform"
           command: |
             echo "═══════════════════════════════════════════════════════"
-            echo "Digital Ocean Deployment"
+            echo "Digital Ocean Deployment - Dev Branch"
             echo "═══════════════════════════════════════════════════════"
 
-            # Select appropriate App ID based on branch
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
-              if [ -z "$DO_APP_ID_PRODUCTION" ]; then
-                echo "ERROR: DO_APP_ID_PRODUCTION environment variable is not set!"
-                echo "This is required for production deployments (master branch)"
-                echo ""
-                echo "To fix this:"
-                echo "1. Go to https://cloud.digitalocean.com/apps"
-                echo "2. Create a production app or get your existing app ID"
-                echo "3. Add DO_APP_ID_PRODUCTION to CircleCI:"
-                echo "   Project Settings → Environment Variables → Add Variable"
-                echo ""
-                exit 1
-              fi
-              APP_ID="${DO_APP_ID_PRODUCTION}"
-              ENVIRONMENT="production"
-              echo "Deploying to PRODUCTION environment"
-            elif [ "$CIRCLE_BRANCH" = "dev" ]; then
-              if [ -z "$DO_APP_ID" ]; then
-                echo "ERROR: DO_APP_ID environment variable is not set!"
-                echo "This is required for staging deployments (dev branch)"
-                echo ""
-                echo "To fix this:"
-                echo "1. Go to https://cloud.digitalocean.com/apps"
-                echo "2. Create a staging app or get your existing app ID"
-                echo "3. Add DO_APP_ID to CircleCI:"
-                echo "   Project Settings → Environment Variables → Add Variable"
-                echo ""
-                exit 1
-              fi
-              APP_ID="${DO_APP_ID}"
-              ENVIRONMENT="staging"
-              echo "Deploying to STAGING environment"
-            else
-              # Fallback for other branches
-              if [ -z "$DO_APP_ID" ]; then
-                echo "ERROR: DO_APP_ID not set for branch: ${CIRCLE_BRANCH}"
-                exit 1
-              fi
-              APP_ID="${DO_APP_ID}"
-              ENVIRONMENT="${CIRCLE_BRANCH}"
-              echo "Deploying to ${ENVIRONMENT} environment"
+            if [ -z "$DO_APP_ID" ]; then
+              echo "ERROR: DO_APP_ID environment variable is not set!"
+              echo ""
+              echo "To fix this:"
+              echo "1. Go to https://cloud.digitalocean.com/apps"
+              echo "2. Create an app or get your existing app ID"
+              echo "3. Add DO_APP_ID to CircleCI:"
+              echo "   Project Settings → Environment Variables → Add Variable"
+              echo ""
+              exit 1
             fi
 
             if [ -z "$DO_REGISTRY_NAME" ]; then
@@ -444,8 +367,8 @@ jobs:
 
             echo ""
             echo "Deployment Configuration:"
-            echo "  Environment: ${ENVIRONMENT}"
-            echo "  App ID: ${APP_ID}"
+            echo "  Environment: dev"
+            echo "  App ID: ${DO_APP_ID}"
             echo "  Registry: ${REGISTRY_URL}"
             echo "  Image: migratingassistant-api:${IMAGE_TAG}"
             echo "  Branch: ${CIRCLE_BRANCH}"
@@ -456,19 +379,19 @@ jobs:
 
             # Trigger deployment
             echo "Triggering deployment (this may take 2-5 minutes)..."
-            doctl apps create-deployment ${APP_ID} --wait
+            doctl apps create-deployment ${DO_APP_ID} --wait
 
             echo ""
             echo "✓ Deployment completed successfully!"
             echo ""
             echo "═══════════════════════════════════════════════════════"
-            echo "Deployment Summary - ${ENVIRONMENT^^}"
+            echo "Deployment Summary - DEV"
             echo "═══════════════════════════════════════════════════════"
             echo "Image: ${REGISTRY_URL}/migratingassistant-api:${IMAGE_TAG}"
-            echo "App: https://cloud.digitalocean.com/apps/${APP_ID}"
+            echo "App: https://cloud.digitalocean.com/apps/${DO_APP_ID}"
             echo ""
             echo "View logs:"
-            echo "  doctl apps logs ${APP_ID} --type=run --follow"
+            echo "  doctl apps logs ${DO_APP_ID} --type=run --follow"
             echo "═══════════════════════════════════════════════════════"
 
       # Alternative: Deploy to Droplet via SSH (commented out)
@@ -507,27 +430,25 @@ workflows:
       # Build and test on all branches
       - build-and-test
 
-      # Publish artifacts on master and dev
+      # Publish artifacts on dev branch only
       - publish-artifacts:
           requires:
             - build-and-test
           filters:
             branches:
               only:
-                - master
                 - dev
 
-      # Build and push Docker image on master and dev
+      # Build and push Docker image on dev branch only
       - build-and-push-docker:
           requires:
             - build-and-test
           filters:
             branches:
               only:
-                - master
                 - dev
 
-      # Deploy to staging (dev branch)
+      # Deploy to dev branch only
       - deploy-to-digital-ocean:
           requires:
             - build-and-push-docker
@@ -535,22 +456,3 @@ workflows:
             branches:
               only:
                 - dev
-
-      # Deploy to production (master branch) - requires manual approval
-      - hold-for-approval:
-          type: approval
-          requires:
-            - build-and-push-docker
-          filters:
-            branches:
-              only:
-                - master
-
-      - deploy-to-digital-ocean:
-          name: deploy-to-production
-          requires:
-            - hold-for-approval
-          filters:
-            branches:
-              only:
-                - master
