@@ -9,7 +9,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable("users");
-        
+
         builder.Property(t => t.Id)
             .HasColumnName("id")
             .HasMaxLength(36)
@@ -29,7 +29,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(t => t.PasswordHash)
             .HasColumnName("password_hash")
             .HasMaxLength(255)
-            .IsRequired();
+            .IsRequired(false); // Password is managed by Identity, not required in User entity
 
         builder.Property(t => t.EmailVerified)
             .HasColumnName("email_verified")

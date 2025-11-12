@@ -55,7 +55,8 @@ public class Authentication : EndpointGroupBase
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = 3600, // 60 minutes in seconds
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
@@ -147,7 +148,8 @@ public class Authentication : EndpointGroupBase
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = 3600,
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
@@ -208,7 +210,8 @@ public class Authentication : EndpointGroupBase
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken,
             ExpiresIn = 3600,
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
@@ -270,4 +273,5 @@ public record AuthResponse
     public string RefreshToken { get; init; } = null!;
     public int ExpiresIn { get; init; }
     public string TokenType { get; init; } = null!;
+    public string UserId { get; init; } = null!;
 }
