@@ -256,7 +256,7 @@ Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "serviceTypeId": 2,
+  "serviceTypeId": 1,
   "providerId": "{{serviceProviderId}}",
   "title": "Shared Apartment Near Melbourne University",
   "description": "Comfortable 3-bedroom apartment with 2 bathrooms. Close to public transport, shops, and universities.",
@@ -512,14 +512,9 @@ Content-Type: {{contentType}}
 
 {
   "userId": "{{userId}}",
-  "documentType": 1,
-  "documentNumber": "N1234567",
-  "issuingCountry": "USA",
-  "issueDate": "2020-01-15T00:00:00Z",
-  "expiryDate": "2030-01-14T23:59:59Z",
-  "verified": false,
-  "fileUrl": "https://storage.example.com/documents/passport-123.pdf",
-  "metadata": "{\"place_of_issue\": \"New York\", \"full_name\": \"John Doe\"}"
+  "docType": "Passport",
+  "storagePath": "https://storage.example.com/documents/passport-123.pdf",
+  "verified": false
 }
 
 ### Create Document - Visa
@@ -529,14 +524,21 @@ Content-Type: {{contentType}}
 
 {
   "userId": "{{userId}}",
-  "documentType": 2,
-  "documentNumber": "500-123456",
-  "issuingCountry": "Australia",
-  "issueDate": "2024-06-01T00:00:00Z",
-  "expiryDate": "2026-06-01T23:59:59Z",
-  "verified": true,
-  "fileUrl": "https://storage.example.com/documents/student-visa-456.pdf",
-  "metadata": "{\"visa_type\": \"Student Visa (Subclass 500)\", \"conditions\": \"8105, 8202, 8501, 8516, 8517\"}"
+  "docType": "Visa",
+  "storagePath": "https://storage.example.com/documents/student-visa-456.pdf",
+  "verified": true
+}
+
+### Create Document - Driver's License
+POST {{baseUrl}}/api/documents
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "docType": "DriversLicense",
+  "storagePath": "https://storage.example.com/documents/license-789.pdf",
+  "verified": false
 }
 
 ### Update Document - Verify
@@ -546,8 +548,19 @@ Content-Type: {{contentType}}
 
 {
   "id": "{{documentId}}",
-  "verified": true,
-  "metadata": "{\"place_of_issue\": \"New York\", \"full_name\": \"John Doe\", \"verified_by\": \"admin@migratingassistant.com\", \"verified_at\": \"2024-11-09T12:00:00Z\"}"
+  "verified": true
+}
+
+### Update Document - Change Storage Path
+PUT {{baseUrl}}/api/documents/{{documentId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{documentId}}",
+  "docType": "Passport",
+  "storagePath": "https://storage.example.com/documents/passport-123-updated.pdf",
+  "verified": true
 }
 
 ### Delete Document
@@ -576,13 +589,10 @@ Content-Type: {{contentType}}
   "userId": "{{userId}}",
   "firstName": "John",
   "lastName": "Doe",
-  "phoneNumber": "+61-412-345-678",
-  "dateOfBirth": "1995-03-15T00:00:00Z",
+  "phone": "+61-412-345-678",
   "nationality": "American",
-  "address": "45 Smith Street, Melbourne VIC 3000",
-  "emergencyContact": "{\"name\": \"Jane Doe\", \"relationship\": \"Sister\", \"phone\": \"+1-555-123-4567\"}",
-  "preferredLanguage": "English",
-  "profilePictureUrl": "https://storage.example.com/avatars/johndoe.jpg"
+  "bio": "International student from the USA studying Computer Science at the University of Melbourne. Looking for accommodation and part-time work opportunities.",
+  "preferences": "{\"contactMethod\": \"email\", \"language\": \"English\", \"newsletter\": true, \"notifications\": {\"email\": true, \"sms\": false}}"
 }
 
 ### Update User Profile
@@ -595,13 +605,10 @@ Content-Type: {{contentType}}
   "userId": "{{userId}}",
   "firstName": "John",
   "lastName": "Doe",
-  "phoneNumber": "+61-412-345-678",
-  "dateOfBirth": "1995-03-15T00:00:00Z",
+  "phone": "+61-412-345-679",
   "nationality": "American",
-  "address": "47 Smith Street, Melbourne VIC 3000",
-  "emergencyContact": "{\"name\": \"Jane Doe\", \"relationship\": \"Sister\", \"phone\": \"+1-555-123-4567\", \"email\": \"jane.doe@example.com\"}",
-  "preferredLanguage": "English",
-  "profilePictureUrl": "https://storage.example.com/avatars/johndoe-updated.jpg"
+  "bio": "International student from the USA studying Computer Science at the University of Melbourne. Looking for accommodation and part-time work opportunities. Recently obtained driver's license.",
+  "preferences": "{\"contactMethod\": \"phone\", \"language\": \"English\", \"newsletter\": true, \"notifications\": {\"email\": true, \"sms\": true}}"
 }
 
 ### Delete User Profile
@@ -627,17 +634,10 @@ Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "employerId": "{{serviceProviderId}}",
-  "title": "Junior Software Developer",
-  "description": "We are seeking a talented junior developer to join our growing team. Perfect for recent graduates with student visa work rights.",
-  "requirements": "- Bachelor's degree in Computer Science or related field\n- Proficiency in C# and .NET\n- Understanding of web development\n- Student visa with work rights or PR",
-  "location": "Melbourne, VIC",
-  "salaryRange": "60000-75000 AUD per annum",
-  "employmentType": "Full-time",
-  "visaSponsorshipAvailable": false,
-  "postedAt": "2024-11-01T00:00:00Z",
-  "expiresAt": "2024-12-31T23:59:59Z",
-  "status": 1
+  "listingId": "{{listingId}}",
+  "jobType": "Full-time",
+  "responsibilities": "Design and develop software solutions using C# and .NET framework. Collaborate with team members on code reviews. Participate in agile development process.",
+  "requirements": "Bachelor's degree in Computer Science. Proficiency in C# and .NET. Understanding of web development. Student visa with work rights or PR."
 }
 
 ### Create Job - Sponsored Position
@@ -646,17 +646,10 @@ Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "employerId": "{{serviceProviderId}}",
-  "title": "Senior Accountant (Visa Sponsorship Available)",
-  "description": "Established accounting firm seeking experienced accountant. We offer visa sponsorship for the right candidate.",
-  "requirements": "- CA/CPA qualified\n- 5+ years experience\n- Strong technical skills\n- Excellent communication",
-  "location": "Sydney, NSW",
-  "salaryRange": "90000-120000 AUD per annum",
-  "employmentType": "Full-time",
-  "visaSponsorshipAvailable": true,
-  "postedAt": "2024-11-05T00:00:00Z",
-  "expiresAt": "2025-01-31T23:59:59Z",
-  "status": 1
+  "listingId": "{{listingId}}",
+  "jobType": "Full-time - Visa Sponsorship Available",
+  "responsibilities": "Manage financial reporting and compliance. Prepare tax returns and assist with audits. Supervise junior accounting staff. Liaise with clients on financial matters.",
+  "requirements": "CA/CPA qualified. 5+ years experience in public practice or corporate accounting. Strong technical accounting skills. Excellent communication and client management abilities."
 }
 
 ### Update Job
@@ -666,15 +659,10 @@ Content-Type: {{contentType}}
 
 {
   "id": "{{jobId}}",
-  "employerId": "{{serviceProviderId}}",
-  "title": "Junior Software Developer (Remote Option)",
-  "description": "We are seeking a talented junior developer to join our growing team. Perfect for recent graduates with student visa work rights. Remote work option available.",
-  "requirements": "- Bachelor's degree in Computer Science or related field\n- Proficiency in C# and .NET\n- Understanding of web development\n- Student visa with work rights or PR\n- Self-motivated for remote work",
-  "location": "Melbourne, VIC (Remote option available)",
-  "salaryRange": "65000-80000 AUD per annum",
-  "employmentType": "Full-time",
-  "visaSponsorshipAvailable": false,
-  "status": 1
+  "listingId": "{{listingId}}",
+  "jobType": "Full-time - Remote Option Available",
+  "responsibilities": "Design and develop software solutions using C# and .NET framework. Collaborate with remote team members on code reviews. Participate in agile development process. Self-manage work schedule and deliverables.",
+  "requirements": "Bachelor's degree in Computer Science. Proficiency in C# and .NET. Understanding of web development. Student visa with work rights or PR. Self-motivated for remote work. Strong communication skills."
 }
 
 ### Delete Job
@@ -701,11 +689,9 @@ Content-Type: {{contentType}}
 
 {
   "jobId": "{{jobId}}",
-  "applicantId": "{{userId}}",
-  "coverLetter": "Dear Hiring Manager,\n\nI am writing to express my strong interest in the Junior Software Developer position. As a recent Computer Science graduate with a student visa allowing full-time work rights, I am excited about the opportunity to contribute to your team.\n\nDuring my studies at the University of Melbourne, I gained hands-on experience with C# and .NET through various projects...",
-  "resumeUrl": "https://storage.example.com/resumes/johndoe-resume.pdf",
-  "status": 1,
-  "appliedAt": "2024-11-09T10:00:00Z"
+  "userId": "{{userId}}",
+  "resumeFileId": "{{documentId}}",
+  "status": 1
 }
 
 ### Update Job Application - Shortlist
@@ -755,10 +741,7 @@ Content-Type: {{contentType}}
 {
   "userId": "{{userId}}",
   "subject": "Unable to complete car rental booking",
-  "description": "I'm trying to book a car rental for December 1-8 but the payment keeps failing. I've tried two different credit cards. Error message: 'Payment gateway timeout'. Booking ID: {{bookingId}}",
-  "category": "Booking",
-  "priority": 2,
-  "status": 1
+  "body": "I'm trying to book a car rental for December 1-8 but the payment keeps failing. I've tried two different credit cards. Error message: 'Payment gateway timeout'. Booking ID: {{bookingId}}"
 }
 
 ### Create Support Ticket - Visa Question
@@ -769,10 +752,7 @@ Content-Type: {{contentType}}
 {
   "userId": "{{userId}}",
   "subject": "Question about student visa work rights",
-  "description": "I have a student visa (subclass 500) and I'd like to know if I can work full-time during semester breaks. The job listing says full-time position - am I eligible?",
-  "category": "General Inquiry",
-  "priority": 3,
-  "status": 1
+  "body": "I have a student visa (subclass 500) and I'd like to know if I can work full-time during semester breaks. The job listing says full-time position - am I eligible?"
 }
 
 ### Update Support Ticket - Assign and In Progress

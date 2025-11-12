@@ -19,6 +19,8 @@ public class GetJobApplicationsQueryHandler : IRequestHandler<GetJobApplications
     public async Task<List<JobApplicationDto>> Handle(GetJobApplicationsQuery request, CancellationToken cancellationToken)
     {
         var applications = await _context.JobApplications
+            .Include(ja => ja.Job)
+            .Include(ja => ja.ResumeFile)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
