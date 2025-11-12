@@ -5,19 +5,20 @@ namespace MigratingAssistant.Application.Payments.Queries;
 public class PaymentDto
 {
     public Guid Id { get; set; }
-    public decimal Amount { get; set; }
-    public string? Status { get; set; }
-    public string? PaymentMethod { get; set; }
-    public DateTime PaymentDate { get; set; }
-    public string? TransactionId { get; set; }
     public Guid UserId { get; set; }
-    public Guid BookingId { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public string? GatewayReference { get; set; }
+    public int Status { get; set; }
+    public string? Meta { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     private class Mapping : Profile
     {
         public Mapping()
         {
-            CreateMap<Payment, PaymentDto>();
+            CreateMap<Payment, PaymentDto>()
+                .ForMember(d => d.Status, opt => opt.MapFrom(s => (int)s.Status));
         }
     }
 }

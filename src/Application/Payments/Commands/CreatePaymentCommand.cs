@@ -7,6 +7,7 @@ namespace MigratingAssistant.Application.Payments.Commands;
 public record CreatePaymentCommand : IRequest<Guid>
 {
     public Guid UserId { get; init; }
+    public Guid? BookingId { get; init; }
     public decimal Amount { get; init; }
     public string Currency { get; init; } = "AUD";
     public string? GatewayReference { get; init; }
@@ -20,7 +21,8 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
     private readonly IUnitOfWork _unitOfWork;
 
     public CreatePaymentCommandHandler(IUnitOfWork unitOfWork)
-    {        _unitOfWork = unitOfWork;
+    {
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Guid> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
@@ -29,6 +31,23 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         if (user == null)
         {
             throw new NotFoundException(nameof(User), request.UserId.ToString());
+        }
+
+        // Validate booking if provided
+        Booking? booking = null;
+        if (request.BookingId.HasValue)
+        {
+            booking = await _unitOfWork.Bookings.GetByIdAsync(request.BookingId.Value, cancellationToken);
+            if (booking == null)
+            {
+                throw new NotFoundException(nameof(Booking), request.BookingId.Value.ToString());
+            }
+
+            // Verify booking belongs to the user
+            if (booking.UserId != request.UserId)
+            {
+                throw new InvalidOperationException("Booking does not belong to the specified user");
+            }
         }
 
         var entity = new Payment
@@ -44,6 +63,14 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         _unitOfWork.Payments.Insert(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Update booking with payment ID if booking was provided
+        if (booking != null)
+        {
+            booking.PaymentId = entity.Id;
+            _unitOfWork.Bookings.Update(booking);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
 
         return entity.Id;
     }

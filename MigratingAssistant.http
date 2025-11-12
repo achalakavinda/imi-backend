@@ -1,0 +1,885 @@
+# MigratingAssistant API Testing
+# REST Client file for testing all API endpoints
+# For more info on HTTP files: https://aka.ms/vs/httpfile
+
+###############################################################################
+# CONFIGURATION
+###############################################################################
+
+# QUICK START GUIDE:
+# 1. Run "Login - Admin User" (line 56) to populate @accessToken, @refreshToken, and @userId
+# 2. Now all other endpoints will use the dynamic token and userId automatically!
+# 3. Create resources in order: ServiceType → ServiceProvider → Listing → InventoryItem → Booking
+
+@baseUrl = http://localhost:5000
+@contentType = application/json
+
+# Default credentials (seeded admin user)
+@adminEmail = admin@migratingassistant.com
+@adminPassword = Admin@123456
+
+# Test user credentials (create via register endpoint)
+@testEmail = testuser@example.com
+@testPassword = Test@123456
+
+# Access token (automatically populated from login response)
+@accessToken = {{loginAdmin.response.body.accessToken}}
+
+# Refresh token (automatically populated from login response)
+@refreshToken = {{loginAdmin.response.body.refreshToken}}
+
+# User ID (automatically populated from login response)
+@userId = {{loginTest.response.body.userId}}
+
+# Store created IDs for testing (automatically populated from create responses)
+@serviceTypeId = {{createServiceType.response.body.$}}
+@listingId = {{createListing.response.body.$}}
+@bookingId = {{createBooking.response.body.$}}
+@paymentId = {{createPayment.response.body.$}}
+@documentId = {{createDocument.response.body.$}}
+@serviceProviderId = {{createServiceProvider.response.body.$}}
+@userProfileId = {{createUserProfile.response.body.$}}
+@inventoryItemId = {{createInventoryItem.response.body.$}}
+@jobId = {{createJob.response.body.$}}
+@jobApplicationId = {{createJobApplication.response.body.$}}
+@supportTicketId = {{createSupportTicket.response.body.$}}
+
+###############################################################################
+# HEALTH CHECKS
+###############################################################################
+
+### Health Check - Basic
+GET {{baseUrl}}/health
+
+### Health Check - Ready
+GET {{baseUrl}}/health/ready
+
+###############################################################################
+# AUTHENTICATION
+###############################################################################
+
+### Login - Admin User
+# @name loginAdmin
+POST {{baseUrl}}/api/authentication/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Login - Test User
+# @name loginTest
+POST {{baseUrl}}/api/authentication/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Register New User
+POST {{baseUrl}}/api/authentication/register
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Register as Guest
+POST {{baseUrl}}/api/authentication/register-guest
+Content-Type: {{contentType}}
+
+{
+  "email": "guest1@example.com",
+  "password": "Guest@123456"
+}
+
+### Refresh Token
+POST {{baseUrl}}/api/authentication/refresh
+Content-Type: {{contentType}}
+
+{
+  "accessToken": "{{accessToken}}",
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Revoke Token
+# This endpoint revokes BOTH the refresh token AND the access token
+# After calling this, the current access token will be blacklisted
+# and cannot be used for subsequent API calls
+POST {{baseUrl}}/api/authentication/revoke
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###############################################################################
+# USERS
+###############################################################################
+
+### Get All Users (Admin Only)
+GET {{baseUrl}}/api/users/list
+Authorization: Bearer {{accessToken}}
+
+### Register User (Alternative endpoint)
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "email": "newuser@example.com",
+  "password": "NewUser@123456"
+}
+
+###############################################################################
+# SERVICE TYPES
+###############################################################################
+
+### Get All Service Types
+GET {{baseUrl}}/api/servicetypes
+Authorization: Bearer {{accessToken}}
+
+### Get Service Type by ID
+GET {{baseUrl}}/api/servicetypes/{{serviceTypeId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Service Type
+# @name createServiceType
+POST {{baseUrl}}/api/servicetypes
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "serviceKey": "visa-consultation",
+  "displayName": "Visa Consultation",
+  "schemaHint": "Professional visa consultation services for all visa types",
+  "enabled": true
+}
+
+### Update Service Type
+PUT {{baseUrl}}/api/servicetypes/{{serviceTypeId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": {{serviceTypeId}},
+  "serviceKey": "visa-consultation",
+  "displayName": "Premium Visa Consultation",
+  "schemaHint": "Premium professional visa consultation services with guaranteed results",
+  "enabled": true
+}
+
+### Delete Service Type
+DELETE {{baseUrl}}/api/servicetypes/{{serviceTypeId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# SERVICE PROVIDERS
+###############################################################################
+
+### Get All Service Providers
+GET {{baseUrl}}/api/serviceproviders
+Authorization: Bearer {{accessToken}}
+
+### Get Service Provider by ID
+GET {{baseUrl}}/api/serviceproviders/{{serviceProviderId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Service Provider
+# @name createServiceProvider
+POST {{baseUrl}}/api/serviceproviders
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "providerName": "Melbourne Immigration Services",
+  "providerType": "Immigration Consultancy",
+  "verified": true,
+  "providerMetadata": "{\"contactEmail\": \"contact@melimmigration.com.au\", \"contactPhone\": \"+61-3-9999-8888\", \"address\": \"123 Collins Street, Melbourne VIC 3000\", \"website\": \"https://www.melimmigration.com.au\", \"description\": \"Leading immigration consultancy in Melbourne specializing in student and skilled visas\", \"rating\": 4.8, \"operatingHours\": {\"monday\": \"9:00-17:00\", \"tuesday\": \"9:00-17:00\", \"wednesday\": \"9:00-17:00\", \"thursday\": \"9:00-17:00\", \"friday\": \"9:00-17:00\"}}"
+}
+
+### Update Service Provider
+PUT {{baseUrl}}/api/serviceproviders/{{serviceProviderId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{serviceProviderId}}",
+  "providerName": "Melbourne Immigration Services Ltd",
+  "providerType": "Immigration Consultancy",
+  "verified": true,
+  "providerMetadata": "{\"contactEmail\": \"contact@melimmigration.com.au\", \"contactPhone\": \"+61-3-9999-8888\", \"address\": \"123 Collins Street, Melbourne VIC 3000\", \"website\": \"https://www.melimmigration.com.au\", \"description\": \"Leading immigration consultancy in Melbourne specializing in student and skilled visas - Now with PR services\", \"rating\": 4.9, \"operatingHours\": {\"monday\": \"9:00-18:00\", \"tuesday\": \"9:00-18:00\", \"wednesday\": \"9:00-18:00\", \"thursday\": \"9:00-18:00\", \"friday\": \"9:00-18:00\", \"saturday\": \"10:00-14:00\"}}"
+}
+
+### Delete Service Provider
+DELETE {{baseUrl}}/api/serviceproviders/{{serviceProviderId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# LISTINGS
+###############################################################################
+
+### Get All Listings
+GET {{baseUrl}}/api/listings
+Authorization: Bearer {{accessToken}}
+
+### Get Listing by ID
+GET {{baseUrl}}/api/listings/{{listingId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Listing - Car Rental
+# @name createListing
+POST {{baseUrl}}/api/listings
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "serviceTypeId": 1,
+  "providerId": "{{serviceProviderId}}",
+  "title": "Toyota Camry - Student Friendly Rental",
+  "description": "Reliable sedan perfect for international students. Includes comprehensive insurance and 24/7 roadside assistance.",
+  "attributes": "{\"make\": \"Toyota\", \"model\": \"Camry\", \"year\": 2023, \"color\": \"Silver\", \"transmission\": \"Automatic\", \"fuelType\": \"Petrol\", \"seats\": 5}",
+  "price": 350.00,
+  "currency": "AUD",
+  "status": 1,
+  "availableFrom": "2024-01-01T00:00:00Z",
+  "availableTo": "2024-12-31T23:59:59Z"
+}
+
+### Create Listing - Accommodation
+POST {{baseUrl}}/api/listings
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "serviceTypeId": 2,
+  "providerId": "{{serviceProviderId}}",
+  "title": "Shared Apartment Near Melbourne University",
+  "description": "Comfortable 3-bedroom apartment with 2 bathrooms. Close to public transport, shops, and universities.",
+  "attributes": "{\"bedrooms\": 3, \"bathrooms\": 2, \"furnished\": true, \"utilities\": \"included\", \"internet\": true, \"parking\": true, \"petFriendly\": false}",
+  "price": 800.00,
+  "currency": "AUD",
+  "status": 1,
+  "availableFrom": "2024-02-01T00:00:00Z",
+  "availableTo": "2025-01-31T23:59:59Z"
+}
+
+### Update Listing
+PUT {{baseUrl}}/api/listings/{{listingId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{listingId}}",
+  "serviceTypeId": 1,
+  "providerId": "{{serviceProviderId}}",
+  "title": "Toyota Camry - Premium Student Rental",
+  "description": "Reliable sedan perfect for international students. Includes comprehensive insurance, 24/7 roadside assistance, and GPS navigation.",
+  "attributes": "{\"make\": \"Toyota\", \"model\": \"Camry\", \"year\": 2023, \"color\": \"Silver\", \"transmission\": \"Automatic\", \"fuelType\": \"Petrol\", \"seats\": 5, \"gps\": true}",
+  "price": 380.00,
+  "currency": "AUD",
+  "status": 1,
+  "availableFrom": "2024-01-01T00:00:00Z",
+  "availableTo": "2024-12-31T23:59:59Z"
+}
+
+### Delete Listing
+DELETE {{baseUrl}}/api/listings/{{listingId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# INVENTORY ITEMS
+###############################################################################
+
+### Get All Inventory Items
+GET {{baseUrl}}/api/inventoryitems
+Authorization: Bearer {{accessToken}}
+
+### Get Inventory Item by ID
+GET {{baseUrl}}/api/inventoryitems/{{inventoryItemId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Inventory Item - Car
+# @name createInventoryItem
+POST {{baseUrl}}/api/inventoryitems
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "listingId": "{{listingId}}",
+  "sku": "CAR-TOY-CAM-001",
+  "serialNumber": "VIN-123456789ABCDEF",
+  "condition": "Excellent",
+  "active": true,
+  "metadata": "{\"registrationNumber\": \"ABC123\", \"registrationExpiry\": \"2025-12-31\", \"lastServiceDate\": \"2024-11-01\", \"nextServiceDue\": \"2025-05-01\"}"
+}
+
+### Create Inventory Item - Accommodation Unit
+POST {{baseUrl}}/api/inventoryitems
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "listingId": "{{listingId}}",
+  "sku": "APT-MEL-UNI-101",
+  "serialNumber": "UNIT-101",
+  "condition": "Good",
+  "active": true,
+  "metadata": "{\"floor\": 1, \"unitNumber\": \"101\", \"view\": \"Street\", \"balcony\": false}"
+}
+
+### Update Inventory Item
+PUT {{baseUrl}}/api/inventoryitems/{{inventoryItemId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{inventoryItemId}}",
+  "listingId": "{{listingId}}",
+  "sku": "CAR-TOY-CAM-001",
+  "serialNumber": "VIN-123456789ABCDEF",
+  "condition": "Very Good",
+  "active": true,
+  "metadata": "{\"registrationNumber\": \"ABC123\", \"registrationExpiry\": \"2025-12-31\", \"lastServiceDate\": \"2024-11-15\", \"nextServiceDue\": \"2025-05-15\", \"km\": 15000}"
+}
+
+### Delete Inventory Item
+DELETE {{baseUrl}}/api/inventoryitems/{{inventoryItemId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# BOOKINGS
+###############################################################################
+
+### Get All Bookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{accessToken}}
+
+### Get Booking by ID
+GET {{baseUrl}}/api/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Booking - Car Rental
+# @name createBooking
+POST {{baseUrl}}/api/bookings
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "listingId": "{{listingId}}",
+  "inventoryItemId": "{{inventoryItemId}}",
+  "userId": "{{userId}}",
+  "startAt": "2024-12-01T09:00:00Z",
+  "endAt": "2024-12-08T17:00:00Z"
+}
+
+### Create Booking - Accommodation (No specific inventory item)
+POST {{baseUrl}}/api/bookings
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "listingId": "{{listingId}}",
+  "inventoryItemId": null,
+  "userId": "{{userId}}",
+  "startAt": "2024-12-15T14:00:00Z",
+  "endAt": "2025-06-15T10:00:00Z"
+}
+
+### Update Booking - Change Dates
+PUT {{baseUrl}}/api/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{bookingId}}",
+  "startAt": "2024-12-02T09:00:00Z",
+  "endAt": "2024-12-09T17:00:00Z",
+  "status": 1
+}
+
+### Update Booking - Confirm
+PUT {{baseUrl}}/api/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{bookingId}}",
+  "status": 2
+}
+
+### Delete Booking
+DELETE {{baseUrl}}/api/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# PAYMENTS
+###############################################################################
+
+### Get All Payments
+GET {{baseUrl}}/api/payments
+Authorization: Bearer {{accessToken}}
+
+### Get Payment by ID
+GET {{baseUrl}}/api/payments/{{paymentId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Payment - Stripe
+# @name createPayment
+# Note: When bookingId is provided, the booking record will be automatically updated with the payment ID
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "bookingId": "{{bookingId}}",
+  "amount": 350.00,
+  "currency": "AUD",
+  "gatewayReference": "pi_1234567890abcdef",
+  "status": 1,
+  "meta": "{\"gateway\": \"stripe\", \"card_last4\": \"4242\", \"card_brand\": \"visa\"}",
+  "idempotencyKey": "booking-payment-{{$guid}}"
+}
+
+### Create Payment - PayPal (with booking)
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "bookingId": "{{bookingId}}",
+  "amount": 800.00,
+  "currency": "AUD",
+  "gatewayReference": "PAYID-ABCDEFG1234567890",
+  "status": 2,
+  "meta": "{\"gateway\": \"paypal\", \"payer_email\": \"user@example.com\"}",
+  "idempotencyKey": "rental-payment-{{$guid}}"
+}
+
+### Create Payment - Standalone (no booking)
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "amount": 150.00,
+  "currency": "AUD",
+  "gatewayReference": "pi_standalone_123456",
+  "status": 1,
+  "meta": "{\"gateway\": \"stripe\", \"purpose\": \"account_credit\"}",
+  "idempotencyKey": "standalone-payment-{{$guid}}"
+}
+
+### Update Payment - Mark as Completed
+PUT {{baseUrl}}/api/payments/{{paymentId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{paymentId}}",
+  "status": 3,
+  "meta": "{\"gateway\": \"stripe\", \"card_last4\": \"4242\", \"card_brand\": \"visa\", \"completion_time\": \"2024-11-09T10:30:00Z\"}"
+}
+
+### Delete Payment
+DELETE {{baseUrl}}/api/payments/{{paymentId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# DOCUMENTS
+###############################################################################
+
+### Get All Documents
+GET {{baseUrl}}/api/documents
+Authorization: Bearer {{accessToken}}
+
+### Get Document by ID
+GET {{baseUrl}}/api/documents/{{documentId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Document - Passport
+# @name createDocument
+POST {{baseUrl}}/api/documents
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "documentType": 1,
+  "documentNumber": "N1234567",
+  "issuingCountry": "USA",
+  "issueDate": "2020-01-15T00:00:00Z",
+  "expiryDate": "2030-01-14T23:59:59Z",
+  "verified": false,
+  "fileUrl": "https://storage.example.com/documents/passport-123.pdf",
+  "metadata": "{\"place_of_issue\": \"New York\", \"full_name\": \"John Doe\"}"
+}
+
+### Create Document - Visa
+POST {{baseUrl}}/api/documents
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "documentType": 2,
+  "documentNumber": "500-123456",
+  "issuingCountry": "Australia",
+  "issueDate": "2024-06-01T00:00:00Z",
+  "expiryDate": "2026-06-01T23:59:59Z",
+  "verified": true,
+  "fileUrl": "https://storage.example.com/documents/student-visa-456.pdf",
+  "metadata": "{\"visa_type\": \"Student Visa (Subclass 500)\", \"conditions\": \"8105, 8202, 8501, 8516, 8517\"}"
+}
+
+### Update Document - Verify
+PUT {{baseUrl}}/api/documents/{{documentId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{documentId}}",
+  "verified": true,
+  "metadata": "{\"place_of_issue\": \"New York\", \"full_name\": \"John Doe\", \"verified_by\": \"admin@migratingassistant.com\", \"verified_at\": \"2024-11-09T12:00:00Z\"}"
+}
+
+### Delete Document
+DELETE {{baseUrl}}/api/documents/{{documentId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# USER PROFILES
+###############################################################################
+
+### Get All User Profiles
+GET {{baseUrl}}/api/userprofiles
+Authorization: Bearer {{accessToken}}
+
+### Get User Profile by ID
+GET {{baseUrl}}/api/userprofiles/{{userProfileId}}
+Authorization: Bearer {{accessToken}}
+
+### Create User Profile
+# @name createUserProfile
+POST {{baseUrl}}/api/userprofiles
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+61-412-345-678",
+  "dateOfBirth": "1995-03-15T00:00:00Z",
+  "nationality": "American",
+  "address": "45 Smith Street, Melbourne VIC 3000",
+  "emergencyContact": "{\"name\": \"Jane Doe\", \"relationship\": \"Sister\", \"phone\": \"+1-555-123-4567\"}",
+  "preferredLanguage": "English",
+  "profilePictureUrl": "https://storage.example.com/avatars/johndoe.jpg"
+}
+
+### Update User Profile
+PUT {{baseUrl}}/api/userprofiles/{{userProfileId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{userProfileId}}",
+  "userId": "{{userId}}",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+61-412-345-678",
+  "dateOfBirth": "1995-03-15T00:00:00Z",
+  "nationality": "American",
+  "address": "47 Smith Street, Melbourne VIC 3000",
+  "emergencyContact": "{\"name\": \"Jane Doe\", \"relationship\": \"Sister\", \"phone\": \"+1-555-123-4567\", \"email\": \"jane.doe@example.com\"}",
+  "preferredLanguage": "English",
+  "profilePictureUrl": "https://storage.example.com/avatars/johndoe-updated.jpg"
+}
+
+### Delete User Profile
+DELETE {{baseUrl}}/api/userprofiles/{{userProfileId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# JOBS
+###############################################################################
+
+### Get All Jobs
+GET {{baseUrl}}/api/jobs
+Authorization: Bearer {{accessToken}}
+
+### Get Job by ID
+GET {{baseUrl}}/api/jobs/{{jobId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Job - Software Developer
+# @name createJob
+POST {{baseUrl}}/api/jobs
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "employerId": "{{serviceProviderId}}",
+  "title": "Junior Software Developer",
+  "description": "We are seeking a talented junior developer to join our growing team. Perfect for recent graduates with student visa work rights.",
+  "requirements": "- Bachelor's degree in Computer Science or related field\n- Proficiency in C# and .NET\n- Understanding of web development\n- Student visa with work rights or PR",
+  "location": "Melbourne, VIC",
+  "salaryRange": "60000-75000 AUD per annum",
+  "employmentType": "Full-time",
+  "visaSponsorshipAvailable": false,
+  "postedAt": "2024-11-01T00:00:00Z",
+  "expiresAt": "2024-12-31T23:59:59Z",
+  "status": 1
+}
+
+### Create Job - Sponsored Position
+POST {{baseUrl}}/api/jobs
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "employerId": "{{serviceProviderId}}",
+  "title": "Senior Accountant (Visa Sponsorship Available)",
+  "description": "Established accounting firm seeking experienced accountant. We offer visa sponsorship for the right candidate.",
+  "requirements": "- CA/CPA qualified\n- 5+ years experience\n- Strong technical skills\n- Excellent communication",
+  "location": "Sydney, NSW",
+  "salaryRange": "90000-120000 AUD per annum",
+  "employmentType": "Full-time",
+  "visaSponsorshipAvailable": true,
+  "postedAt": "2024-11-05T00:00:00Z",
+  "expiresAt": "2025-01-31T23:59:59Z",
+  "status": 1
+}
+
+### Update Job
+PUT {{baseUrl}}/api/jobs/{{jobId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{jobId}}",
+  "employerId": "{{serviceProviderId}}",
+  "title": "Junior Software Developer (Remote Option)",
+  "description": "We are seeking a talented junior developer to join our growing team. Perfect for recent graduates with student visa work rights. Remote work option available.",
+  "requirements": "- Bachelor's degree in Computer Science or related field\n- Proficiency in C# and .NET\n- Understanding of web development\n- Student visa with work rights or PR\n- Self-motivated for remote work",
+  "location": "Melbourne, VIC (Remote option available)",
+  "salaryRange": "65000-80000 AUD per annum",
+  "employmentType": "Full-time",
+  "visaSponsorshipAvailable": false,
+  "status": 1
+}
+
+### Delete Job
+DELETE {{baseUrl}}/api/jobs/{{jobId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# JOB APPLICATIONS
+###############################################################################
+
+### Get All Job Applications
+GET {{baseUrl}}/api/jobapplications
+Authorization: Bearer {{accessToken}}
+
+### Get Job Application by ID
+GET {{baseUrl}}/api/jobapplications/{{jobApplicationId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Job Application
+# @name createJobApplication
+POST {{baseUrl}}/api/jobapplications
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "jobId": "{{jobId}}",
+  "applicantId": "{{userId}}",
+  "coverLetter": "Dear Hiring Manager,\n\nI am writing to express my strong interest in the Junior Software Developer position. As a recent Computer Science graduate with a student visa allowing full-time work rights, I am excited about the opportunity to contribute to your team.\n\nDuring my studies at the University of Melbourne, I gained hands-on experience with C# and .NET through various projects...",
+  "resumeUrl": "https://storage.example.com/resumes/johndoe-resume.pdf",
+  "status": 1,
+  "appliedAt": "2024-11-09T10:00:00Z"
+}
+
+### Update Job Application - Shortlist
+PUT {{baseUrl}}/api/jobapplications/{{jobApplicationId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{jobApplicationId}}",
+  "status": 2,
+  "notes": "Strong technical background. Invited for interview on Nov 15."
+}
+
+### Update Job Application - Accept
+PUT {{baseUrl}}/api/jobapplications/{{jobApplicationId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{jobApplicationId}}",
+  "status": 3,
+  "notes": "Excellent interview performance. Offer extended."
+}
+
+### Delete Job Application
+DELETE {{baseUrl}}/api/jobapplications/{{jobApplicationId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# SUPPORT TICKETS
+###############################################################################
+
+### Get All Support Tickets
+GET {{baseUrl}}/api/supporttickets
+Authorization: Bearer {{accessToken}}
+
+### Get Support Ticket by ID
+GET {{baseUrl}}/api/supporttickets/{{supportTicketId}}
+Authorization: Bearer {{accessToken}}
+
+### Create Support Ticket - Booking Issue
+# @name createSupportTicket
+POST {{baseUrl}}/api/supporttickets
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "subject": "Unable to complete car rental booking",
+  "description": "I'm trying to book a car rental for December 1-8 but the payment keeps failing. I've tried two different credit cards. Error message: 'Payment gateway timeout'. Booking ID: {{bookingId}}",
+  "category": "Booking",
+  "priority": 2,
+  "status": 1
+}
+
+### Create Support Ticket - Visa Question
+POST {{baseUrl}}/api/supporttickets
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "subject": "Question about student visa work rights",
+  "description": "I have a student visa (subclass 500) and I'd like to know if I can work full-time during semester breaks. The job listing says full-time position - am I eligible?",
+  "category": "General Inquiry",
+  "priority": 3,
+  "status": 1
+}
+
+### Update Support Ticket - Assign and In Progress
+PUT {{baseUrl}}/api/supporttickets/{{supportTicketId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{supportTicketId}}",
+  "assignedTo": "support@migratingassistant.com",
+  "status": 2,
+  "priority": 2
+}
+
+### Update Support Ticket - Resolve
+PUT {{baseUrl}}/api/supporttickets/{{supportTicketId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": "{{supportTicketId}}",
+  "status": 3,
+  "resolution": "Payment gateway timeout issue was resolved by clearing browser cache and trying again. User successfully completed booking. Updated payment retry logic to handle timeouts better."
+}
+
+### Delete Support Ticket
+DELETE {{baseUrl}}/api/supporttickets/{{supportTicketId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# AUDIT LOGS (Read-Only)
+###############################################################################
+
+### Get All Audit Logs
+GET {{baseUrl}}/api/auditlogs
+Authorization: Bearer {{accessToken}}
+
+### Get Audit Log by ID
+GET {{baseUrl}}/api/auditlogs/1
+Authorization: Bearer {{accessToken}}
+
+###############################################################################
+# COMMON TESTING SCENARIOS
+###############################################################################
+
+### Scenario 1: New Immigrant Complete Journey
+# 1. Register as new user
+# 2. Create user profile
+# 3. Upload documents (passport, visa)
+# 4. Search for listings (accommodation, car)
+# 5. Create booking
+# 6. Make payment
+# 7. Get confirmation
+
+### Scenario 2: Service Provider Workflow
+# 1. Login as admin
+# 2. Create service provider
+# 3. Create service type
+# 4. Create listings under provider
+# 5. Add inventory items
+# 6. View bookings
+
+### Scenario 3: Job Seeker Workflow
+# 1. Login as user
+# 2. Create/update profile
+# 3. Browse jobs
+# 4. Submit application
+# 5. Track application status
+
+### Scenario 4: Support Workflow
+# 1. Create support ticket
+# 2. Admin assigns ticket
+# 3. Update status to in-progress
+# 4. Resolve ticket
+
+###############################################################################
+# NOTES
+###############################################################################
+
+# Data Types:
+# - Guid fields: Use format "00000000-0000-0000-0000-000000000000"
+# - DateTime fields: Use ISO 8601 format "2024-11-09T10:30:00Z"
+# - Decimal fields: Use format 123.45 (no quotes)
+# - Int/Long fields: Use format 123 (no quotes)
+# - Boolean fields: Use true or false (no quotes)
+# - JSON strings: Escape quotes or use single object string
+
+# Status Enums:
+# BookingStatus: 0=Pending, 1=Confirmed, 2=Cancelled, 3=Completed
+# ListingStatus: 0=Draft, 1=Active, 2=Inactive, 3=Archived
+# PaymentGatewayStatus: 0=Pending, 1=Processing, 2=Authorized, 3=Captured, 4=Failed, 5=Refunded
+# DocumentType: 1=Passport, 2=Visa, 3=DriversLicense, 4=BirthCertificate, 5=Other
+# JobApplicationStatus: 1=Submitted, 2=UnderReview, 3=Shortlisted, 4=Interviewed, 5=Offered, 6=Accepted, 7=Rejected
+# SupportTicketStatus: 1=Open, 2=InProgress, 3=Resolved, 4=Closed
+# SupportTicketPriority: 1=Low, 2=Medium, 3=High, 4=Critical
+
+# Testing Tips:
+# 1. Login first - the @accessToken variable will be auto-populated from loginAdmin response
+# 2. Run "Get All Users" to see user list, then update @userId with the admin user's ID
+# 3. Create resources in order: ServiceType → ServiceProvider → Listing → InventoryItem → Booking
+# 4. IDs are automatically captured from create responses (look for @name tags)
+# 5. Use dynamic variables: {{serviceTypeId}}, {{listingId}}, {{userId}}, etc.
+# 6. Check response status codes: 200=OK, 201=Created, 204=NoContent, 400=BadRequest, 401=Unauthorized, 404=NotFound
+
+# Dynamic Variable Usage:
+# - All create endpoints use @name tags (e.g., # @name createServiceType)
+# - Variables automatically reference responses: @serviceTypeId = {{createServiceType.response.body.$}}
+# - The $ symbol represents the response body value (usually the created ID)
+# - Token is auto-populated: @accessToken = {{loginAdmin.response.body.accessToken}}
+# - Refresh token is auto-populated: @refreshToken = {{loginAdmin.response.body.refreshToken}}

@@ -55,7 +55,8 @@ public class Authentication : EndpointGroupBase
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = 3600, // 60 minutes in seconds
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
@@ -107,6 +108,26 @@ public class Authentication : EndpointGroupBase
         // Assign role to user
         await userManager.AddToRoleAsync(user, role);
 
+        // Create corresponding User entity for business logic
+        var userRole = role switch
+        {
+            Roles.Administrator => Domain.Enums.UserRole.Admin,
+            Roles.Guest => Domain.Enums.UserRole.User, // Guest maps to User in the domain
+            Roles.User => Domain.Enums.UserRole.User,
+            _ => Domain.Enums.UserRole.User
+        };
+
+        var userEntity = new Domain.Entities.User
+        {
+            Id = Guid.Parse(user.Id), // Use the same ID as the ApplicationUser
+            Email = user.Email,
+            PasswordHash = null, // Password is managed by Identity, not stored in User entity
+            Role = userRole,
+            EmailVerified = false
+        };
+
+        dbContext.Users.Add(userEntity);
+
         var roles = new List<string> { role };
         var accessToken = jwtTokenService.GenerateAccessToken(user.Id, user.Email!, roles);
         var refreshToken = jwtTokenService.GenerateRefreshToken();
@@ -127,7 +148,8 @@ public class Authentication : EndpointGroupBase
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = 3600,
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
@@ -188,14 +210,16 @@ public class Authentication : EndpointGroupBase
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken,
             ExpiresIn = 3600,
-            TokenType = "Bearer"
+            TokenType = "Bearer",
+            UserId = user.Id
         });
     }
 
     public async Task<Results<Ok, UnauthorizedHttpResult>> RevokeToken(
         RevokeTokenRequest request,
         ICurrentUserService currentUserService,
-        ApplicationDbContext dbContext)
+        ApplicationDbContext dbContext,
+        HttpContext httpContext)
     {
         var userId = currentUserService.UserId;
         if (string.IsNullOrEmpty(userId))
@@ -211,7 +235,27 @@ public class Authentication : EndpointGroupBase
             return TypedResults.Unauthorized();
         }
 
+        // Revoke the refresh token
         refreshToken.RevokedAt = DateTime.UtcNow;
+
+        // Also blacklist the current access token
+        var authHeader = httpContext.Request.Headers["Authorization"].ToString();
+        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+        {
+            var accessToken = authHeader.Substring("Bearer ".Length).Trim();
+
+            var revokedToken = new RevokedToken
+            {
+                Token = accessToken,
+                UserId = userId,
+                RevokedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddHours(1), // Match access token expiry
+                Reason = "User requested token revocation"
+            };
+
+            dbContext.RevokedTokens.Add(revokedToken);
+        }
+
         await dbContext.SaveChangesAsync();
 
         return TypedResults.Ok();
@@ -229,4 +273,5 @@ public record AuthResponse
     public string RefreshToken { get; init; } = null!;
     public int ExpiresIn { get; init; }
     public string TokenType { get; init; } = null!;
+    public string UserId { get; init; } = null!;
 }
