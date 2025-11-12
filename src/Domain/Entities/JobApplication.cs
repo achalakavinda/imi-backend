@@ -6,13 +6,13 @@ public class JobApplication : BaseAuditableEntity<Guid>
 {
     // Guid id will be inherited from BaseEntity<Guid>
     public Guid JobId { get; set; }
-    public Job? Job { get; private set; }
+    public virtual Job? Job { get; set; }
 
     public Guid UserId { get; set; }
-    public User? User { get; private set; }
+    public virtual User? User { get; set; }
 
     public Guid? ResumeFileId { get; set; }
-    public Document? ResumeFile { get; private set; }
+    public virtual Document? ResumeFile { get; set; }
 
     public JobApplicationSubmissionStatus Status { get; set; } = JobApplicationSubmissionStatus.Submitted;
     public DateTimeOffset AppliedAt { get; set; } = DateTimeOffset.UtcNow;
