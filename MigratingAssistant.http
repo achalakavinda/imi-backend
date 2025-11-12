@@ -7,10 +7,9 @@
 ###############################################################################
 
 # QUICK START GUIDE:
-# 1. Run "Login - Admin User" (line 56) to populate @accessToken and @refreshToken
-# 2. Run "Get All Users" (line 117) and copy the admin user ID to @userId variable (line 42)
-# 3. Now all other endpoints will use the dynamic token and IDs automatically!
-# 4. Create resources in order: ServiceType → ServiceProvider → Listing → InventoryItem → Booking
+# 1. Run "Login - Admin User" (line 56) to populate @accessToken, @refreshToken, and @userId
+# 2. Now all other endpoints will use the dynamic token and userId automatically!
+# 3. Create resources in order: ServiceType → ServiceProvider → Listing → InventoryItem → Booking
 
 @baseUrl = http://localhost:5000
 @contentType = application/json
@@ -29,6 +28,9 @@
 # Refresh token (automatically populated from login response)
 @refreshToken = {{loginAdmin.response.body.refreshToken}}
 
+# User ID (automatically populated from login response)
+@userId = {{loginTest.response.body.userId}}
+
 # Store created IDs for testing (automatically populated from create responses)
 @serviceTypeId = {{createServiceType.response.body.$}}
 @listingId = {{createListing.response.body.$}}
@@ -41,10 +43,6 @@
 @jobId = {{createJob.response.body.$}}
 @jobApplicationId = {{createJobApplication.response.body.$}}
 @supportTicketId = {{createSupportTicket.response.body.$}}
-
-# Note: To get userId, call "Get All Users" endpoint and copy the ID from response
-# Or create a new user with Register endpoint and use that ID
-@userId = 6e1dfafc-fe83-451d-9474-114911528add
 
 ###############################################################################
 # HEALTH CHECKS
@@ -197,15 +195,11 @@ Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "name": "Melbourne Immigration Services",
-  "contactEmail": "contact@melimmigration.com.au",
-  "contactPhone": "+61-3-9999-8888",
-  "address": "123 Collins Street, Melbourne VIC 3000",
-  "website": "https://www.melimmigration.com.au",
-  "description": "Leading immigration consultancy in Melbourne specializing in student and skilled visas",
-  "isVerified": true,
-  "rating": 4.8,
-  "operatingHours": "{\"monday\": \"9:00-17:00\", \"tuesday\": \"9:00-17:00\", \"wednesday\": \"9:00-17:00\", \"thursday\": \"9:00-17:00\", \"friday\": \"9:00-17:00\"}"
+  "userId": "{{userId}}",
+  "providerName": "Melbourne Immigration Services",
+  "providerType": "Immigration Consultancy",
+  "verified": true,
+  "providerMetadata": "{\"contactEmail\": \"contact@melimmigration.com.au\", \"contactPhone\": \"+61-3-9999-8888\", \"address\": \"123 Collins Street, Melbourne VIC 3000\", \"website\": \"https://www.melimmigration.com.au\", \"description\": \"Leading immigration consultancy in Melbourne specializing in student and skilled visas\", \"rating\": 4.8, \"operatingHours\": {\"monday\": \"9:00-17:00\", \"tuesday\": \"9:00-17:00\", \"wednesday\": \"9:00-17:00\", \"thursday\": \"9:00-17:00\", \"friday\": \"9:00-17:00\"}}"
 }
 
 ### Update Service Provider
@@ -215,15 +209,10 @@ Content-Type: {{contentType}}
 
 {
   "id": "{{serviceProviderId}}",
-  "name": "Melbourne Immigration Services Ltd",
-  "contactEmail": "contact@melimmigration.com.au",
-  "contactPhone": "+61-3-9999-8888",
-  "address": "123 Collins Street, Melbourne VIC 3000",
-  "website": "https://www.melimmigration.com.au",
-  "description": "Leading immigration consultancy in Melbourne specializing in student and skilled visas - Now with PR services",
-  "isVerified": true,
-  "rating": 4.9,
-  "operatingHours": "{\"monday\": \"9:00-18:00\", \"tuesday\": \"9:00-18:00\", \"wednesday\": \"9:00-18:00\", \"thursday\": \"9:00-18:00\", \"friday\": \"9:00-18:00\", \"saturday\": \"10:00-14:00\"}"
+  "providerName": "Melbourne Immigration Services Ltd",
+  "providerType": "Immigration Consultancy",
+  "verified": true,
+  "providerMetadata": "{\"contactEmail\": \"contact@melimmigration.com.au\", \"contactPhone\": \"+61-3-9999-8888\", \"address\": \"123 Collins Street, Melbourne VIC 3000\", \"website\": \"https://www.melimmigration.com.au\", \"description\": \"Leading immigration consultancy in Melbourne specializing in student and skilled visas - Now with PR services\", \"rating\": 4.9, \"operatingHours\": {\"monday\": \"9:00-18:00\", \"tuesday\": \"9:00-18:00\", \"wednesday\": \"9:00-18:00\", \"thursday\": \"9:00-18:00\", \"friday\": \"9:00-18:00\", \"saturday\": \"10:00-14:00\"}}"
 }
 
 ### Delete Service Provider
@@ -441,12 +430,14 @@ Authorization: Bearer {{accessToken}}
 
 ### Create Payment - Stripe
 # @name createPayment
+# Note: When bookingId is provided, the booking record will be automatically updated with the payment ID
 POST {{baseUrl}}/api/payments
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
   "userId": "{{userId}}",
+  "bookingId": "{{bookingId}}",
   "amount": 350.00,
   "currency": "AUD",
   "gatewayReference": "pi_1234567890abcdef",
@@ -455,19 +446,35 @@ Content-Type: {{contentType}}
   "idempotencyKey": "booking-payment-{{$guid}}"
 }
 
-### Create Payment - PayPal
+### Create Payment - PayPal (with booking)
 POST {{baseUrl}}/api/payments
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
   "userId": "{{userId}}",
+  "bookingId": "{{bookingId}}",
   "amount": 800.00,
   "currency": "AUD",
   "gatewayReference": "PAYID-ABCDEFG1234567890",
   "status": 2,
   "meta": "{\"gateway\": \"paypal\", \"payer_email\": \"user@example.com\"}",
   "idempotencyKey": "rental-payment-{{$guid}}"
+}
+
+### Create Payment - Standalone (no booking)
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}",
+  "amount": 150.00,
+  "currency": "AUD",
+  "gatewayReference": "pi_standalone_123456",
+  "status": 1,
+  "meta": "{\"gateway\": \"stripe\", \"purpose\": \"account_credit\"}",
+  "idempotencyKey": "standalone-payment-{{$guid}}"
 }
 
 ### Update Payment - Mark as Completed
