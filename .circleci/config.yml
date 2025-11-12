@@ -332,7 +332,18 @@ jobs:
               exit 1
             fi
 
+            # Verify token is present (show first/last 4 chars only for security)
+            TOKEN_LENGTH=${#DO_ACCESS_TOKEN}
+            TOKEN_PREFIX=${DO_ACCESS_TOKEN:0:4}
+            TOKEN_SUFFIX=${DO_ACCESS_TOKEN: -4}
+            echo "Using DO_ACCESS_TOKEN from CircleCI (length: $TOKEN_LENGTH, starts: $TOKEN_PREFIX..., ends: ...$TOKEN_SUFFIX)"
+
             doctl auth init --access-token ${DO_ACCESS_TOKEN}
+
+            # Verify authentication and check account info
+            echo "Verifying authentication..."
+            doctl account get
+
             echo "✓ Successfully authenticated with Digital Ocean"
 
       # Deploy to Digital Ocean App Platform
@@ -359,6 +370,28 @@ jobs:
               echo "ERROR: DO_REGISTRY_NAME is not set (should be 'migratingassistant')"
               exit 1
             fi
+
+            # Verify doctl is still authenticated
+            echo "Verifying doctl authentication..."
+            doctl account get || {
+              echo "ERROR: doctl authentication lost between steps"
+              echo "Re-authenticating..."
+              doctl auth init --access-token ${DO_ACCESS_TOKEN}
+            }
+
+            # Verify we can access the app
+            echo "Verifying access to app ${DO_APP_ID}..."
+            doctl apps get ${DO_APP_ID} > /dev/null 2>&1 || {
+              echo "ERROR: Cannot access app ${DO_APP_ID}"
+              echo "This could mean:"
+              echo "1. The app doesn't exist"
+              echo "2. The DO_ACCESS_TOKEN doesn't have permission to access this app"
+              echo "3. The app is in a different DigitalOcean account/team"
+              echo ""
+              echo "Checking accessible apps..."
+              doctl apps list
+              exit 1
+            }
 
             # Display deployment info
             REGISTRY_NAME="${DO_REGISTRY_NAME}"
