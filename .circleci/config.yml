@@ -1,31 +1,187 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/reference/configuration-reference
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
+# Define reusable commands
+commands:
+  restore-dotnet-cache:
+    description: "Restore .NET NuGet packages cache"
+    steps:
+      - restore_cache:
+          keys:
+            - dotnet-packages-v1-{{ checksum "Directory.Packages.props" }}
+            - dotnet-packages-v1-
+
+  save-dotnet-cache:
+    description: "Save .NET NuGet packages cache"
+    steps:
+      - save_cache:
+          key: dotnet-packages-v1-{{ checksum "Directory.Packages.props" }}
+          paths:
+            - ~/.nuget/packages
+
+# Define jobs
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
+  build-and-test:
     docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
+      - image: mcr.microsoft.com/dotnet/sdk:8.0
+      - image: mysql:8.0
+        environment:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: MigratingAssistantTest
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpassword
+
+    resource_class: medium
+
+    steps:
+      - checkout
+
+      # Restore NuGet packages from cache
+      - restore-dotnet-cache
+
+      # Restore dependencies
+      - run:
+          name: "Restore NuGet packages"
+          command: |
+            dotnet restore
+
+      # Save NuGet cache
+      - save-dotnet-cache
+
+      # Build solution
+      - run:
+          name: "Build solution"
+          command: |
+            dotnet build --configuration Release --no-restore
+
+      # Wait for MySQL to be ready
+      - run:
+          name: "Wait for MySQL"
+          command: |
+            apt-get update && apt-get install -y default-mysql-client netcat-openbsd
+            for i in {1..30}; do
+              if nc -z 127.0.0.1 3306; then
+                echo "MySQL is ready!"
+                break
+              fi
+              echo "Waiting for MySQL... (attempt $i/30)"
+              sleep 2
+            done
+            # Verify connection
+            mysql -h 127.0.0.1 -u root -ptestpassword -e "SELECT 1"
+
+      # Run unit tests (Domain and Application)
+      - run:
+          name: "Run unit tests"
+          command: |
+            dotnet test tests/Domain.UnitTests/Domain.UnitTests.csproj \
+              --configuration Release \
+              --no-build \
+              --logger "trx;LogFileName=domain-test-results.trx" \
+              --collect:"XPlat Code Coverage" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+            dotnet test tests/Application.UnitTests/Application.UnitTests.csproj \
+              --configuration Release \
+              --no-build \
+              --logger "trx;LogFileName=application-test-results.trx" \
+              --collect:"XPlat Code Coverage" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # Run integration tests with MySQL
+      - run:
+          name: "Run integration tests"
+          environment:
+            ConnectionStrings__DefaultConnection: "Server=127.0.0.1;Database=MigratingAssistantTest;Uid=testuser;Pwd=testpassword;"
+            ASPNETCORE_ENVIRONMENT: "Testing"
+          command: |
+            dotnet test tests/Infrastructure.IntegrationTests/Infrastructure.IntegrationTests.csproj \
+              --configuration Release \
+              --no-build \
+              --logger "trx;LogFileName=integration-test-results.trx" \
+              --collect:"XPlat Code Coverage" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # Run functional tests
+      - run:
+          name: "Run functional tests"
+          environment:
+            ConnectionStrings__DefaultConnection: "Server=127.0.0.1;Database=MigratingAssistantTest;Uid=testuser;Pwd=testpassword;"
+            ASPNETCORE_ENVIRONMENT: "Testing"
+            JwtSettings__Secret: "test-secret-key-at-least-32-characters-long-for-testing"
+          command: |
+            dotnet test tests/Application.FunctionalTests/Application.FunctionalTests.csproj \
+              --configuration Release \
+              --no-build \
+              --logger "trx;LogFileName=functional-test-results.trx" \
+              --collect:"XPlat Code Coverage" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # Store test results
+      - store_test_results:
+          path: tests
+
+      # Store artifacts (test results and coverage)
+      - store_artifacts:
+          path: tests/Domain.UnitTests/TestResults
+          destination: test-results/domain
+
+      - store_artifacts:
+          path: tests/Application.UnitTests/TestResults
+          destination: test-results/application
+
+      - store_artifacts:
+          path: tests/Infrastructure.IntegrationTests/TestResults
+          destination: test-results/infrastructure
+
+      - store_artifacts:
+          path: tests/Application.FunctionalTests/TestResults
+          destination: test-results/functional
+
+  build-docker-image:
+    docker:
       - image: cimg/base:current
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
-    steps:
-      # Checkout the code as the first step.
-      - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+    resource_class: medium
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          version: 20.10.24
+          docker_layer_caching: true
+
+      - run:
+          name: "Build Docker image"
+          command: |
+            docker build -t migratingassistant-api:${CIRCLE_SHA1} .
+            docker tag migratingassistant-api:${CIRCLE_SHA1} migratingassistant-api:latest
+
+      - run:
+          name: "Test Docker image"
+          command: |
+            docker images migratingassistant-api
+
+      # Optional: Push to container registry
+      # Uncomment and configure when ready
+      # - run:
+      #     name: "Push to Docker Hub"
+      #     command: |
+      #       echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      #       docker tag migratingassistant-api:${CIRCLE_SHA1} yourusername/migratingassistant-api:${CIRCLE_SHA1}
+      #       docker tag migratingassistant-api:${CIRCLE_SHA1} yourusername/migratingassistant-api:latest
+      #       docker push yourusername/migratingassistant-api:${CIRCLE_SHA1}
+      #       docker push yourusername/migratingassistant-api:latest
+
+# Define workflows
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  build-test-deploy:
     jobs:
-      - say-hello
+      - build-and-test
+      - build-docker-image:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only:
+                - master
+                - dev
