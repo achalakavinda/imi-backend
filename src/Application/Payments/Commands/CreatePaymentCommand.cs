@@ -52,6 +52,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         var entity = new Payment
         {
+            Id = Guid.NewGuid(), // Generate ID explicitly so we can use it for booking
             UserId = request.UserId,
             Amount = request.Amount,
             Currency = request.Currency,
@@ -62,15 +63,16 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         };
 
         _unitOfWork.Payments.Insert(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Update booking with payment ID if booking was provided
         if (booking != null)
         {
             booking.PaymentId = entity.Id;
             _unitOfWork.Bookings.Update(booking);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
+
+        // Save both payment and booking update in a single transaction
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.Id;
     }

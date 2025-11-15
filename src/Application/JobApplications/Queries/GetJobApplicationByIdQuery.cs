@@ -19,6 +19,8 @@ public class GetJobApplicationByIdQueryHandler : IRequestHandler<GetJobApplicati
     public async Task<JobApplicationDto?> Handle(GetJobApplicationByIdQuery request, CancellationToken cancellationToken)
     {
         var application = await _context.JobApplications
+            .Include(ja => ja.Job)
+            .Include(ja => ja.ResumeFile)
             .AsNoTracking()
             .FirstOrDefaultAsync(j => j.Id == request.Id, cancellationToken);
 
